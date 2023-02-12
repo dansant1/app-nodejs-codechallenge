@@ -1,16 +1,16 @@
 import { Field, Int, ObjectType, ArgsType,  } from '@nestjs/graphql';
-import { IsString, IsUUID, IsNotEmpty, Min, Max, IsNumber, IsArray } from 'class-validator';
+import { IsString, IsUUID, Min, Max, IsNumber, IsArray, IsOptional } from 'class-validator';
 
 @ObjectType()
 class TransactionType {
   @Field()
-  readonly name: string;
+  name: string;
 }
 
 @ObjectType()
 export class TransactionStatus {
   @Field()
-  readonly name: string;
+  name: string;
 }
 
 @ObjectType()
@@ -58,7 +58,7 @@ export class TransactionRes {
   readonly value: number;
 
   @Field()
-  readonly createdAt: Date;
+  readonly createdAt: string;
 }
 
 const TRANSFER_TYPE_VALIDATION_MESSAGE = 'Transfer type must be [1, 2, 3]';
@@ -67,14 +67,18 @@ const TRANSFER_TYPE_VALIDATION_MESSAGE = 'Transfer type must be [1, 2, 3]';
 export class CreateTransactionReq {
   @IsString()
   @IsUUID()
-  @IsNotEmpty()
-  @Field()
+  @IsOptional()
+  @Field({
+    nullable: true,
+  })
   readonly accountExternalIdCredit: string;
 
   @IsString()
   @IsUUID()
-  @IsNotEmpty()
-  @Field()
+  @IsOptional()
+  @Field({
+    nullable: true,
+  })
   readonly accountExternalIdDebit: string;
 
   @IsNumber()
@@ -93,5 +97,5 @@ export class CreateTransactionReq {
 export class TransactionListRes {
   @IsArray()
   @Field(() => [TransactionRes])
-  readonly transactions: TransactionRes[]
+  readonly transactions: TransactionRes[];
 }

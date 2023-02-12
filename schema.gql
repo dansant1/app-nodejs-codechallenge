@@ -15,13 +15,8 @@ type TransactionRes {
   transactionType: TransactionType!
   transactionStatus: TransactionStatus!
   value: Float!
-  createdAt: DateTime!
+  createdAt: String!
 }
-
-"""
-A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
-"""
-scalar DateTime
 
 type TransactionListRes {
   transactions: [TransactionRes!]!
@@ -34,5 +29,5 @@ type Query {
 
 type Mutation {
   """Procesa un transacción."""
-  create(accountExternalIdCredit: String!, accountExternalIdDebit: String!, tranferTypeId: Int!, value: Int!): TransactionRes!
+  create(accountExternalIdCredit: String, accountExternalIdDebit: String, tranferTypeId: Int!, value: Int!): TransactionRes!
 }

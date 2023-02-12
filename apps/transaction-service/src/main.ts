@@ -1,14 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { TransactionServiceModule } from './transaction-service.module';
 import { Transport } from '@nestjs/microservices';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, } from '@nestjs/common';
+import { TransactionServiceModule } from './transaction-service.module';
+
 const logger = new Logger('transaction-service');
-import {
-  KafkaValidationPipe,
-} from '../../@shared';
 
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice(TransactionServiceModule, {
+  const app = await NestFactory.createMicroservice(
+    TransactionServiceModule, {
     transport: Transport.KAFKA,
     options: {
       client: {
@@ -20,6 +19,6 @@ async function bootstrap() {
     }
   });
   await app.listen();
-  logger.log('Microservice is running');
+  logger.log('Transaction Microservice is running');
 }
 bootstrap();

@@ -3,30 +3,45 @@ import {
   UseFilters,
   UsePipes,
 } from '@nestjs/common';
-import { MessagePattern, Payload, Ctx, KafkaContext } from '@nestjs/microservices';
+import { MessagePattern, Payload, Ctx, KafkaContext, EventPattern } from '@nestjs/microservices';
 import { TransactionServiceService } from './transaction-service.service';
 import {
   KafkaExceptionFilter,
-  EVENT_CREATE_TRANSACTION_REQUEST,
   KafkaValidationPipe,
+  EVENT_CREATE_TRANSACTION_REQUEST,
+  EVENT_UPDATE_TRANSACTION_STATUS_REQUEST,
 } from '../../@shared';
 import {
-  CreateTransactionMessage
+  CreateTransactionReq,
+  AntifraudFeaturesDTO,
+  AntifraudReq,
 } from './dto';
 
 @Controller()
 export class TransactionServiceController {
   constructor(
-    private readonly transactionServiceService: TransactionServiceService
+    private readonly transactionServiceService: TransactionServiceService,
   ) {}
 
   @MessagePattern(EVENT_CREATE_TRANSACTION_REQUEST)
   @UsePipes(new KafkaValidationPipe())
   @UseFilters(new KafkaExceptionFilter())
   async create(
-    @Payload() message: CreateTransactionMessage,
+    @Payload() message: CreateTransactionReq,
     @Ctx() context: KafkaContext,
   ): Promise<any> {
-    return this.transactionServiceService.create(message);
+    return this.transactionServiceService
+    .create(message);
+  }
+
+  @EventPattern(EVENT_UPDATE_TRANSACTION_STATUS_REQUEST)
+  @UsePipes(new KafkaValidationPipe())
+  @UseFilters(new KafkaExceptionFilter())
+  async updateTransactionStatus(
+    @Payload() message: AntifraudReq,
+    @Ctx() context: KafkaContext,
+  ): Promise<void> {
+    void this.transactionServiceService
+    .updateTransactionStatusByAntifraudFeature(message);
   }
 }

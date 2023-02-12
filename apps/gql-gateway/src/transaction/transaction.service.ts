@@ -17,16 +17,13 @@ export class TransactionService {
   }
 
   async create(value: any): Promise<any> {
-    console.log('LOG!!', value);
     return new Promise((resolve, reject) => {
       this.transactionClient
       .send(EVENT_CREATE_TRANSACTION_REQUEST, {
           value,
       })
-      .pipe(first())
       .subscribe({
         next: (response) => {
-          console.log('RESPONSE=', response);
           return resolve(response);
         },
         error: (err) => {
