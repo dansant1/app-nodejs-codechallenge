@@ -1,0 +1,38 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type TransactionType {
+  name: String!
+}
+
+type TransactionStatus {
+  name: String!
+}
+
+type TransactionRes {
+  transactionExternalId: String!
+  transactionType: TransactionType!
+  transactionStatus: TransactionStatus!
+  value: Float!
+  createdAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type TransactionListRes {
+  transactions: [TransactionRes!]!
+}
+
+type Query {
+  """Obtiene la lista de transacciones"""
+  get: TransactionListRes!
+}
+
+type Mutation {
+  """Procesa un transacción."""
+  create(accountExternalIdCredit: String!, accountExternalIdDebit: String!, tranferTypeId: Int!, value: Int!): TransactionRes!
+}
