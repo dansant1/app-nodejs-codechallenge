@@ -18,13 +18,9 @@ type TransactionRes {
   createdAt: String!
 }
 
-type TransactionListRes {
-  transactions: [TransactionRes!]!
-}
-
 type Query {
-  """Obtiene la lista de transacciones"""
-  get: TransactionListRes!
+  """Obtiene una transacción según su external ID"""
+  getByExternalId(transactionExternalId: String!): TransactionRes!
 }
 
 type Mutation {
