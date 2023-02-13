@@ -1,4 +1,8 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { 
+  Injectable, 
+  Inject, 
+  CACHE_MANAGER,
+} from '@nestjs/common';
 import { 
   Repository,
 } from 'typeorm';
@@ -7,6 +11,7 @@ import {
 } from '@nestjs/typeorm';
 import {
   ClientKafka,
+  RpcException,
 } from '@nestjs/microservices';
 import {
   Transaction,
@@ -15,6 +20,7 @@ import { v4 as uuidv4, } from 'uuid';
 import {
   CreateTransactionReq,
   AntifraudReq,
+  TransactionCreatedResponseDTO,
 } from './dto';
 import {
   Feature,
@@ -25,19 +31,42 @@ import {
   transactionStatus,
   transferTypeName,
 } from '../../@shared';
+import {
+  Cache,
+} from 'cache-manager';
 
 @Injectable()
 export class TransactionServiceService {
 
   constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @Inject(ANTIFRAUD_SERVICE) private readonly antifraudEngineClient: ClientKafka,
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
   ) {}
 
-  async create(body: CreateTransactionReq): Promise<any> { 
+  async getByExternalId(
+    transactionExternalId: string,
+  ): Promise<TransactionCreatedResponseDTO> {
+    let transaction = await this.cacheManager.get<Transaction>(
+      transactionExternalId,
+    );
+    if (!transaction) {
+      transaction = await this.transactionRepository.findOne({
+        where: {
+          transactionExternalId,
+        }
+      });
+      void this.cacheManager.set(transactionExternalId, transaction);
+    }
+    return this._mapResponse(transactionExternalId, transaction);
+  }
+
+  async create(
+    body: CreateTransactionReq,
+  ): Promise<TransactionCreatedResponseDTO> { 
     if (!transferTypes.includes(body.tranferTypeId)) {
-      throw new Error('no transfer type permited');
+      throw new RpcException('no transfer type allowed');
     }
     const transactionExternalId = uuidv4();
     const model = this.transactionRepository.create({
@@ -48,30 +77,40 @@ export class TransactionServiceService {
       accountExternalIdCredit: body.accountExternalIdCredit,
       transactionTypeId: body.tranferTypeId,
     });
-    
     const result = await this.transactionRepository.save(model);
-    this.antifraudEngineClient
+    await this.cacheManager.set(transactionExternalId, result);
+    void this.antifraudEngineClient
     .emit(EVENT_GET_PENDING_TRANSACTION_REQUEST, {
       value: {
         transactionId: result.id,
       }
     });
+    return this._mapResponse(transactionExternalId, result, body);
+  }
+
+  private _mapResponse(
+    transactionExternalId: string, 
+    transaction: Transaction, 
+    body?: CreateTransactionReq,
+  ): TransactionCreatedResponseDTO {
     return {
       value: {
-        value: result.value,
+        value: transaction?.value,
         transactionExternalId,
         transactionType: {
-          name: transferTypeName[body.tranferTypeId],
+          name: transferTypeName[transaction?.transactionTypeId ?? body?.tranferTypeId],
         },
         transactionStatus: {
-          name: transactionStatus[TransactionStatus.PENDING],
+          name: transactionStatus[transaction?.transactionStatusId ?? TransactionStatus.PENDING],
         },
-        createdAt: result.createdAt,
+        createdAt: transaction?.createdAt,
       }
     }
   }
 
-  async updateTransactionStatusByAntifraudFeature(antifraudReq: AntifraudReq): Promise<void> {
+  async updateTransactionStatusByAntifraudFeature(
+    antifraudReq: AntifraudReq,
+  ): Promise<void> {
     const {
       features: antifraudFeatures = [],
       transactionId: id = 0,
@@ -89,18 +128,28 @@ export class TransactionServiceService {
     let transactionStatusId = TransactionStatus.APPROVED;
     for (const feature of antifraudFeatures) {
       const code = feature.code;
-      const isValid = this.runFeatureEngine(code, transaction);
+      const isValid = this._runFeatureEngine(code, transaction);
       if (!isValid) transactionStatusId = TransactionStatus.REJECTED;
     }
+
     await this.transactionRepository
       .update({
         id,
     }, {
         transactionStatusId,
     });
+
+    await this.cacheManager.del(transaction.transactionExternalId);
+    await this.cacheManager.set(transaction.transactionExternalId, {
+      ...transaction,
+      transactionStatusId,
+    });
   }
 
-  runFeatureEngine(code: string, transaction: Transaction): boolean {
+  private _runFeatureEngine(
+    code: string, 
+    transaction: Transaction,
+  ): boolean {
     return Feature[code](transaction);
   }
 }

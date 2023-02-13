@@ -1,10 +1,14 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
-import { first } from 'rxjs';
 import {
   EVENT_CREATE_TRANSACTION_REQUEST,
+  EVENT_GET_TRANSACTION_REQUEST,
   TRANSACTION_SERVICE,
 } from '../../../@shared';
+import {
+  TransactionRes,
+  CreateTransactionReq,
+} from './dto';
 
 @Injectable()
 export class TransactionService {
@@ -14,12 +18,31 @@ export class TransactionService {
 
   onModuleInit() {
     this.transactionClient.subscribeToResponseOf(EVENT_CREATE_TRANSACTION_REQUEST);
+    this.transactionClient.subscribeToResponseOf(EVENT_GET_TRANSACTION_REQUEST);
   }
 
-  async create(value: any): Promise<any> {
+  async create(
+    value: CreateTransactionReq,
+  ): Promise<TransactionRes> {
+    const response = await this._emitAndWait<TransactionRes>(EVENT_CREATE_TRANSACTION_REQUEST, {
+      ...value,
+    });
+    return response;
+  }
+
+  async getByExternalId(
+    transactionExternalId: string,
+  ): Promise<TransactionRes> {
+    const response = await this._emitAndWait<TransactionRes>(EVENT_GET_TRANSACTION_REQUEST, {
+      transactionExternalId,
+    });
+    return response;
+  }
+
+  private async _emitAndWait<T>(topic: string, value: Record<string, unknown>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.transactionClient
-      .send(EVENT_CREATE_TRANSACTION_REQUEST, {
+      .send(topic, {
           value,
       })
       .subscribe({
@@ -29,7 +52,7 @@ export class TransactionService {
         error: (err) => {
           console.error(
             err,
-            `createTransaction -> [${EVENT_CREATE_TRANSACTION_REQUEST}] = Error sending message to kafka`,
+            `[${topic}] = Error sending message to kafka`,
           );
           return reject(err);
         },        

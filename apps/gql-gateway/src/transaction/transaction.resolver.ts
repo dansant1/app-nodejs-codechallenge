@@ -9,29 +9,28 @@ import {
   Transaction,
   CreateTransactionReq,
   TransactionRes,
-  TransactionListRes,
-} from './dto/base.dto';
+  GetTransactionReq,
+} from './dto';
 
 @Resolver(() => Transaction)
 export class TransactionResolver {
   constructor(private readonly transactionService: TransactionService) {}
 
-  @Query(() => TransactionListRes, {
-    description: 'Obtiene la lista de transacciones',
+  @Query(() => TransactionRes, {
+    description: 'Obtiene una transacción según su external ID',
   })
-  async get(): Promise<TransactionListRes> {
-    return {
-      transactions: [],
-    }
+  async getByExternalId(
+    @Args() requestArguments: GetTransactionReq,
+  ): Promise<TransactionRes> {
+    return await this.transactionService.getByExternalId(requestArguments.transactionExternalId);
   }
 
   @Mutation(() => TransactionRes, {
     description: 'Procesa un transacción.',
   })
   async create(
-    @Args() args: CreateTransactionReq
+    @Args() requestArguments: CreateTransactionReq,
   ): Promise<TransactionRes> {
-    const response = await this.transactionService.create(args);
-    return response;
+    return await this.transactionService.create(requestArguments);
   }
 }

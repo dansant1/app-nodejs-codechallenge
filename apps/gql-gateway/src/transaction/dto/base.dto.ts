@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType, ArgsType,  } from '@nestjs/graphql';
-import { IsString, IsUUID, Min, Max, IsNumber, IsArray, IsOptional } from 'class-validator';
+import { IsString, IsUUID, Min, Max, IsNumber, IsOptional } from 'class-validator';
 
 @ObjectType()
 class TransactionType {
@@ -93,9 +93,10 @@ export class CreateTransactionReq {
   readonly value: number;
 }
 
-@ObjectType()
-export class TransactionListRes {
-  @IsArray()
-  @Field(() => [TransactionRes])
-  readonly transactions: TransactionRes[];
+@ArgsType()
+export class GetTransactionReq {
+  @IsString()
+  @IsUUID()
+  @Field()
+  readonly transactionExternalId: string;
 }

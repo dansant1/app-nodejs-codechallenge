@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common';
+import { 
+  Module,
+  CacheModule,
+} from '@nestjs/common';
+import type { RedisClientOptions } from 'redis';
+import * as redisStore from 'cache-manager-redis-store';
 import { 
   ClientsModule,
    Transport 
@@ -26,6 +31,12 @@ import {
       Transaction,
       TransactionType,
     ]),
+    CacheModule.register<RedisClientOptions>({
+      //store: redisStore,
+      url: 'redis://localhost:6379',
+      //host: 'localhost',
+      //port: 6379,
+    }),
     ClientsModule.register([
       {
         name: ANTIFRAUD_SERVICE,
